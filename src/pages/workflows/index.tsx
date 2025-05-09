@@ -1,91 +1,49 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import MainLayout from '../../components/layout/MainLayout';
 import { format } from 'date-fns';
+import { getWorkflowHistory, getScheduledWorkflows } from '../../services/youtube-workflows';
+import { WorkflowHistory, WorkflowSchedule } from '../../types/youtube-workflows';
 
 export default function Workflows() {
   const router = useRouter();
   
-  // Mock data for development
-  const scheduledWorkflows = [
-    {
-      id: 'sched-1234',
-      workflow_type: 'niche-scout',
-      parameters: { query: 'gaming' },
-      frequency: 'daily',
-      next_run: new Date(Date.now() + 86400000).toISOString(),
-      status: 'scheduled',
-      created_at: new Date(Date.now() - 86400000).toISOString(),
-      updated_at: new Date(Date.now() - 86400000).toISOString(),
-      user_id: 'user-1'
-    },
-    {
-      id: 'sched-2345',
-      workflow_type: 'seed-to-blueprint',
-      parameters: { niche: 'fitness' },
-      frequency: 'weekly',
-      next_run: new Date(Date.now() + 604800000).toISOString(),
-      status: 'scheduled',
-      created_at: new Date(Date.now() - 172800000).toISOString(),
-      updated_at: new Date(Date.now() - 172800000).toISOString(),
-      user_id: 'user-1'
-    },
-    {
-      id: 'sched-3456',
-      workflow_type: 'niche-scout',
-      parameters: { query: 'cooking' },
-      frequency: 'once',
-      next_run: new Date(Date.now() + 259200000).toISOString(),
-      status: 'scheduled',
-      created_at: new Date(Date.now() - 86400000).toISOString(),
-      updated_at: new Date(Date.now() - 86400000).toISOString(),
-      user_id: 'user-1'
+  // State for workflow data
+  const [scheduledWorkflows, setScheduledWorkflows] = useState<WorkflowSchedule[]>([]);
+  const [workflowHistory, setWorkflowHistory] = useState<WorkflowHistory[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Fetch workflow data function
+  const fetchWorkflowData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Fetch both scheduled workflows and history in parallel
+      const [historyData, scheduledData] = await Promise.all([
+        getWorkflowHistory(),
+        getScheduledWorkflows()
+      ]);
+      
+      setWorkflowHistory(historyData);
+      setScheduledWorkflows(scheduledData);
+      
+      console.log('Fetched workflow history:', historyData);
+      console.log('Fetched scheduled workflows:', scheduledData);
+    } catch (err) {
+      console.error('Error fetching workflow data:', err);
+      setError('Failed to load workflow data. Please try again later.');
+    } finally {
+      setIsLoading(false);
     }
-  ];
-
-  const workflowHistory = [
-    {
-      id: 'wf-1234',
-      workflow_type: 'niche-scout',
-      parameters: { query: 'gaming' },
-      status: 'completed',
-      started_at: new Date(Date.now() - 3600000).toISOString(),
-      completed_at: new Date(Date.now() - 3540000).toISOString(),
-      result_url: '/api/social-intel/workflow-result/wf-1234',
-      user_id: 'user-1'
-    },
-    {
-      id: 'wf-2345',
-      workflow_type: 'seed-to-blueprint',
-      parameters: { video_url: 'https://youtube.com/watch?v=example123' },
-      status: 'completed',
-      started_at: new Date(Date.now() - 7200000).toISOString(),
-      completed_at: new Date(Date.now() - 7080000).toISOString(),
-      result_url: '/api/social-intel/workflow-result/wf-2345',
-      user_id: 'user-1'
-    },
-    {
-      id: 'wf-3456',
-      workflow_type: 'niche-scout',
-      parameters: { query: 'cooking' },
-      status: 'completed',
-      started_at: new Date(Date.now() - 86400000).toISOString(),
-      completed_at: new Date(Date.now() - 86340000).toISOString(),
-      result_url: '/api/social-intel/workflow-result/wf-3456',
-      user_id: 'user-1'
-    },
-    {
-      id: 'wf-4567',
-      workflow_type: 'seed-to-blueprint',
-      parameters: { niche: 'fitness' },
-      status: 'completed',
-      started_at: new Date(Date.now() - 172800000).toISOString(),
-      completed_at: new Date(Date.now() - 172740000).toISOString(),
-      result_url: '/api/social-intel/workflow-result/wf-4567',
-      user_id: 'user-1'
-    }
-  ];
+  };
+  
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchWorkflowData();
+  }, []);
 
   const renderWorkflowCard = (title, description, href) => (
     <div className="card p-6 h-full flex flex-col">
@@ -129,90 +87,130 @@ export default function Workflows() {
           )}
         </div>
 
-        {/* Scheduled Runs */}
-        <div className="card p-4">
-          <h2 className="text-lg font-semibold mb-4">Scheduled Runs</h2>
-          <div className="table-container">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Time</th>
-                  <th>Workflow</th>
-                  <th>Parameters</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {scheduledWorkflows.map((workflow, index) => (
-                  <tr key={index}>
-                    <td>{workflow.frequency}</td>
-                    <td>{workflow.workflow_type === 'niche-scout' ? 'Niche-Scout' : 'Seed-to-Blueprint'}</td>
-                    <td>
-                      {Object.entries(workflow.parameters)
-                        .filter(([_, value]) => value)
-                        .map(([key, value]) => `${value}`)
-                        .join(', ')}
-                    </td>
-                    <td><span className="status-scheduled">⏱ Scheduled</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 p-4 rounded-md">
+            <p className="font-bold">Error</p>
+            <p>{error}</p>
           </div>
-        </div>
+        )}
 
-        {/* Workflow History */}
-        <div className="card p-4">
-          <h2 className="text-lg font-semibold mb-4">Workflow History</h2>
-          <div className="table-container">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Time</th>
-                  <th>Workflow</th>
-                  <th>Parameters</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {workflowHistory.map((workflow, index) => (
-                  <tr key={index}>
-                    <td>{format(new Date(workflow.started_at), 'MMM d')}</td>
-                    <td>{workflow.workflow_type === 'niche-scout' ? 'Niche-Scout' : 'Seed-to-Blueprint'}</td>
-                    <td>
-                      {Object.entries(workflow.parameters)
-                        .filter(([_, value]) => value)
-                        .map(([key, value]) => `${value}`)
-                        .join(', ')}
-                    </td>
-                    <td>
-                      {workflow.status === 'completed' && (
-                        <span className="status-completed">✓ Completed</span>
-                      )}
-                      {workflow.status === 'running' && (
-                        <span className="status-pending">⟳ Running</span>
-                      )}
-                      {workflow.status === 'error' && (
-                        <span className="status-error">✗ Error</span>
-                      )}
-                    </td>
-                    <td>
-                      {workflow.status === 'completed' && (
-                        <button
-                          onClick={() => router.push(`/workflows/${workflow.workflow_type}/results/${workflow.id}`)}
-                          className="btn-sm bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded px-2 py-1"
-                        >
-                          View Results
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* Loading State */}
+        {isLoading ? (
+          <div className="flex items-center justify-center p-8">
+            <div className="animate-pulse flex flex-col items-center">
+              <div className="h-10 w-10 rounded-full border-4 border-t-blue-500 border-r-transparent border-b-blue-700 border-l-blue-500 animate-spin"></div>
+              <p className="mt-3 text-gray-600 dark:text-gray-400">Loading workflow data...</p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <>
+            {/* Scheduled Runs */}
+            <div className="card p-4">
+              <h2 className="text-lg font-semibold mb-4">Scheduled Runs</h2>
+              {scheduledWorkflows.length === 0 ? (
+                <p className="text-gray-500 dark:text-gray-400 text-center py-4">No scheduled workflows found.</p>
+              ) : (
+                <div className="table-container">
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Time</th>
+                        <th>Workflow</th>
+                        <th>Parameters</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {scheduledWorkflows.map((workflow, index) => (
+                        <tr key={index}>
+                          <td>{workflow.frequency}</td>
+                          <td>{workflow.workflow_type === 'niche-scout' ? 'Niche-Scout' : 'Seed-to-Blueprint'}</td>
+                          <td>
+                            {workflow.parameters && Object.entries(workflow.parameters)
+                              .filter(([_, value]) => value)
+                              .map(([key, value]) => `${value}`)
+                              .join(', ')}
+                          </td>
+                          <td><span className="status-scheduled">⏱ Scheduled</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Workflow History */}
+            <div className="card p-4">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-semibold">Workflow History</h2>
+                <button 
+                  onClick={() => fetchWorkflowData()}
+                  className="btn-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Refresh
+                </button>
+              </div>
+              
+              {workflowHistory.length === 0 ? (
+                <p className="text-gray-500 dark:text-gray-400 text-center py-4">No workflow history found.</p>
+              ) : (
+                <div className="table-container">
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Time</th>
+                        <th>Workflow</th>
+                        <th>Parameters</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {workflowHistory.map((workflow, index) => (
+                        <tr key={index}>
+                          <td>{workflow.started_at ? format(new Date(workflow.started_at), 'MMM d') : 'N/A'}</td>
+                          <td>{workflow.workflow_type === 'niche-scout' ? 'Niche-Scout' : 'Seed-to-Blueprint'}</td>
+                          <td>
+                            {workflow.parameters && Object.entries(workflow.parameters)
+                              .filter(([_, value]) => value)
+                              .map(([key, value]) => `${value}`)
+                              .join(', ')}
+                          </td>
+                          <td>
+                            {workflow.status === 'completed' && (
+                              <span className="status-completed">✓ Completed</span>
+                            )}
+                            {workflow.status === 'running' && (
+                              <span className="status-pending">⟳ Running</span>
+                            )}
+                            {workflow.status === 'error' && (
+                              <span className="status-error">✗ Error</span>
+                            )}
+                          </td>
+                          <td>
+                            {workflow.status === 'completed' && (
+                              <button
+                                onClick={() => router.push(`/workflows/${workflow.workflow_type}/results/${workflow.id}`)}
+                                className="btn-sm bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded px-2 py-1"
+                              >
+                                View Results
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </MainLayout>
   );
