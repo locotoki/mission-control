@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/router";
 
 // Dynamically load the better loading component with no SSR
 import MainLayout from "../../../components/layout/MainLayout";
 import { motion, AnimatePresence } from "framer-motion";
+import { runNicheScout } from "../../../services/youtube-workflows";
 
 // Types ----------------------------------------------------------------------
 interface NicheForm {
@@ -49,13 +51,30 @@ export default function NicheScout() {
   const update = (field: keyof NicheForm, value: any) =>
     setForm((f) => ({ ...f, [field]: value }));
 
-  const handleRunWorkflow = async () => {\r\n    console.log('CLIENT: Starting API call to niche-scout');
+  const router = useRouter();
+
+  const handleRunWorkflow = async () => {
+    console.log('CLIENT: Starting API call to niche-scout');
     setIsLoading(true);
-    // Simulate API call with a timeout
-    setTimeout(() => {
-      alert('Analysis complete! Navigating to results...');
+
+    try {
+      // Call the actual API service
+      const response = await runNicheScout(form.description);
+
+      // Navigate to the results page with the result ID
+      if (response && response._id) {
+        console.log('Workflow completed successfully, navigating to results:', response._id);
+        router.push(`/workflows/niche-scout/results/${response._id}`);
+      } else {
+        console.error('Workflow completed but no result ID was returned');
+        alert('An error occurred while running the workflow.');
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error('Error running Niche-Scout workflow:', error);
+      alert('An error occurred while running the workflow.');
       setIsLoading(false);
-    }, 2000);
+    }
   };
 
   const handleScheduleWorkflow = () => {

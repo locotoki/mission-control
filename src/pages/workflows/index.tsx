@@ -172,6 +172,7 @@ export default function Workflows() {
                   <th>Workflow</th>
                   <th>Parameters</th>
                   <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -194,6 +195,16 @@ export default function Workflows() {
                       )}
                       {workflow.status === 'error' && (
                         <span className="status-error">✗ Error</span>
+                      )}
+                    </td>
+                    <td>
+                      {workflow.status === 'completed' && (
+                        <button
+                          onClick={() => router.push(`/workflows/${workflow.workflow_type}/results/${workflow.id}`)}
+                          className="btn-sm bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded px-2 py-1"
+                        >
+                          View Results
+                        </button>
                       )}
                     </td>
                   </tr>
